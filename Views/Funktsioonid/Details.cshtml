@@ -2,6 +2,9 @@
 
 @{
     ViewData["Title"] = "Graafik ja detailid";
+    var xVals = System.Text.Json.JsonSerializer.Serialize(ViewBag.XValues ?? new List<double>());
+    var yFunc = System.Text.Json.JsonSerializer.Serialize(ViewBag.YFunction ?? new List<double>());
+    var yDeriv = System.Text.Json.JsonSerializer.Serialize(ViewBag.YDerivative ?? new List<double>());
 }
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -26,7 +29,7 @@
 
         <div class="col-md-8">
             <div class="card p-3">
-                <h5 class="card-title text-center">Funktsiooni ja tuletise graafik</h5>
+                <h5 class="card-title text-center">Funktsiooni ja tuletise graafik (NCalc)</h5>
                 <canvas id="funktsiooniGraafik" width="600" height="350"></canvas>
             </div>
         </div>
@@ -34,23 +37,9 @@
 </div>
 
 <script>
-    // Генерация точек для графика (диапазон от -5 до 5 с шагом 0.2)
-    const xVaartused = [];
-    const yFunktsiooniVaartused = [];
-    const yTuletiseVaartused = [];
-
-    for (let x = -5; x <= 5; x += 0.2) {
-        let xFixed = parseFloat(x.toFixed(1));
-        xVaartused.push(xFixed);
-
-        // Пример вычисления (для f(x) = x^2 - 4x + 3 и f'(x) = 2x - 4)
-        // В реальном проекте вычисления можно настроить или передавать через API
-        let yF = Math.pow(xFixed, 2) - 4 * xFixed + 3;
-        let yD = 2 * xFixed - 4;
-
-        yFunktsiooniVaartused.push(yF);
-        yTuletiseVaartused.push(yD);
-    }
+    const xVaartused = @Html.Raw(xVals);
+    const yFunktsiooniVaartused = @Html.Raw(yFunc);
+    const yTuletiseVaartused = @Html.Raw(yDeriv);
 
     const ctx = document.getElementById('funktsiooniGraafik').getContext('2d');
     new Chart(ctx, {
