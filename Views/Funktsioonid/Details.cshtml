@@ -8,70 +8,108 @@
 }
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
 
 <div class="container mt-4">
-    <h2>Funktsiooni analüüs: <code>f(x) = @Model.Valem</code></h2>
-
-    <div class="row mt-4">
-        <div class="col-md-4">
-            <div class="card mb-3">
-                <div class="card-header bg-primary text-white">Omadused</div>
-                <ul class="list-group list-group-flush">
-                    <li class="list-group-item"><strong>Valem f(x):</strong> @Model.Valem</li>
-                    <li class="list-group-item"><strong>Tuletis f'(x):</strong> @Model.Tuletis</li>
-                    <li class="list-group-item"><strong>Määramispiirkond:</strong> @Model.Maaramispiirkond</li>
-                    <li class="list-group-item"><strong>Kriitilised punktid:</strong> @Model.KriitilisedPunktid</li>
-                    <li class="list-group-item"><strong>Ekstreemumid:</strong> @Model.Ekstreemumid</li>
-                </ul>
-            </div>
-            <a asp-action="Index" class="btn btn-secondary w-100">Tagasi nimekirja</a>
-        </div>
-
-        <div class="col-md-8">
-            <div class="card p-3">
-                <h5 class="card-title text-center">Funktsiooni ja tuletise graafik (NCalc)</h5>
-                <canvas id="funktsiooniGraafik" width="600" height="350"></canvas>
-            </div>
-        </div>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="m-0">Funktsiooni analüüs: <code>f(x) = @Model.Valem</code></h3>
+        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="resetZoom()">
+            ↺ Taasta vaade (Reset Zoom)
+        </button>
     </div>
+
+    <div class="card p-3 my-3">
+        <canvas id="funktsiooniGraafik" width="600" height="350"></canvas>
+    </div>
+
+    <a asp-action="Index" class="btn btn-outline-secondary">Tagasi nimekirja</a>
 </div>
 
 <script>
-    const xVaartused = @Html.Raw(xVals);
-    const yFunktsiooniVaartused = @Html.Raw(yFunc);
-    const yTuletiseVaartused = @Html.Raw(yDeriv);
+    const xVaartused = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.XValues ?? new List<double>()));
+    const yFunktsioon = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.YFunction ?? new List<double>()));
+    const yTuletis = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.YDerivative ?? new List<double>()));
+
+    const datasetF = xVaartused.map((x, i) => ({ x: x, y: yFunktsioon[i] }));
+    const datasetD = xVaartused.map((x, i) => ({ x: x, y: yTuletis[i] }));
 
     const ctx = document.getElementById('funktsiooniGraafik').getContext('2d');
-    new Chart(ctx, {
-        type: 'line',
+
+    const myChart = new Chart(ctx, {
+        type: 'scatter',
         data: {
-            labels: xVaartused,
             datasets: [
                 {
                     label: 'f(x) = ' + '@Model.Valem',
-                    data: yFunktsiooniVaartused,
+                    data: datasetF,
+                    showLine: true,
                     borderColor: '#0d6efd',
+                    borderWidth: 2.5,
                     backgroundColor: '#0d6efd',
-                    tension: 0.3,
-                    fill: false
+                    pointRadius: 0,
+                    tension: 0.1
                 },
                 {
                     label: "f'(x) = " + '@Model.Tuletis',
-                    data: yTuletiseVaartused,
+                    data: datasetD,
+                    showLine: true,
                     borderColor: '#dc3545',
+                    borderWidth: 2,
+                    borderDash: [6, 6],
                     backgroundColor: '#dc3545',
-                    borderDash: [5, 5],
-                    tension: 0.1,
-                    fill: false
+                    pointRadius: 0,
+                    tension: 0.1
                 }
             ]
         },
         options: {
             responsive: true,
+            maintainAspectRatio: true,
             scales: {
-                x: { title: { display: true, text: 'x' } },
-                y: { title: { display: true, text: 'y' } }
+                x: {
+                    type: 'linear',
+                    position: 'center',
+                    min: -10,
+                    max: 10,
+                    title: { display: true, text: 'X', font: { weight: 'bold', size: 14 } },
+                    grid: {
+                        color: (context) => context.tick.value === 0 ? '#000000' : '#e0e0e0',
+                        lineWidth: (context) => context.tick.value === 0 ? 2 : 1
+                    }
+                },
+                y: {
+                    type: 'linear',
+                    position: 'center',
+                    min: -10,
+                    max: 10,
+                    title: { display: true, text: 'Y', font: { weight: 'bold', size: 14 } },
+                    grid: {
+                        color: (context) => context.tick.value === 0 ? '#000000' : '#e0e0e0',
+                        lineWidth: (context) => context.tick.value === 0 ? 2 : 1
+                    }
+                }
+            },
+            plugins: {
+                legend: { position: 'top' },
+                zoom: {
+                    pan: {
+                        enabled: true,
+                        mode: 'xy'
+                    },
+                    zoom: {
+                        wheel: {
+                            enabled: true
+                        },
+                        pinch: {
+                            enabled: true
+                        },
+                        mode: 'xy'
+                    }
+                }
             }
         }
     });
+    function resetZoom() {
+        myChart.resetZoom();
+    }
 </script>
