@@ -1,18 +1,88 @@
-﻿@model mathProject.Data.AppDbContext
+﻿@model mathProject.Models.FunktsiooniUurimine
 
 @{
-    ViewData["Title"] = "Details";
+    ViewData["Title"] = "Graafik ja detailid";
 }
 
-<h1>Details</h1>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-<div>
-    <h4>AppDbContext</h4>
-    <hr />
-    <dl class="row">
-    </dl>
+<div class="container mt-4">
+    <h2>Funktsiooni analüüs: <code>f(x) = @Model.Valem</code></h2>
+
+    <div class="row mt-4">
+        <div class="col-md-4">
+            <div class="card mb-3">
+                <div class="card-header bg-primary text-white">Omadused</div>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item"><strong>Valem f(x):</strong> @Model.Valem</li>
+                    <li class="list-group-item"><strong>Tuletis f'(x):</strong> @Model.Tuletis</li>
+                    <li class="list-group-item"><strong>Määramispiirkond:</strong> @Model.Maaramispiirkond</li>
+                    <li class="list-group-item"><strong>Kriitilised punktid:</strong> @Model.KriitilisedPunktid</li>
+                    <li class="list-group-item"><strong>Ekstreemumid:</strong> @Model.Ekstreemumid</li>
+                </ul>
+            </div>
+            <a asp-action="Index" class="btn btn-secondary w-100">Tagasi nimekirja</a>
+        </div>
+
+        <div class="col-md-8">
+            <div class="card p-3">
+                <h5 class="card-title text-center">Funktsiooni ja tuletise graafik</h5>
+                <canvas id="funktsiooniGraafik" width="600" height="350"></canvas>
+            </div>
+        </div>
+    </div>
 </div>
-<div>
-    @Html.ActionLink("Edit", "Edit", new { /* id = Model.PrimaryKey */ }) |
-    <a asp-action="Index">Back to List</a>
-</div>
+
+<script>
+    // Генерация точек для графика (диапазон от -5 до 5 с шагом 0.2)
+    const xVaartused = [];
+    const yFunktsiooniVaartused = [];
+    const yTuletiseVaartused = [];
+
+    for (let x = -5; x <= 5; x += 0.2) {
+        let xFixed = parseFloat(x.toFixed(1));
+        xVaartused.push(xFixed);
+
+        // Пример вычисления (для f(x) = x^2 - 4x + 3 и f'(x) = 2x - 4)
+        // В реальном проекте вычисления можно настроить или передавать через API
+        let yF = Math.pow(xFixed, 2) - 4 * xFixed + 3;
+        let yD = 2 * xFixed - 4;
+
+        yFunktsiooniVaartused.push(yF);
+        yTuletiseVaartused.push(yD);
+    }
+
+    const ctx = document.getElementById('funktsiooniGraafik').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: xVaartused,
+            datasets: [
+                {
+                    label: 'f(x) = ' + '@Model.Valem',
+                    data: yFunktsiooniVaartused,
+                    borderColor: '#0d6efd',
+                    backgroundColor: '#0d6efd',
+                    tension: 0.3,
+                    fill: false
+                },
+                {
+                    label: "f'(x) = " + '@Model.Tuletis',
+                    data: yTuletiseVaartused,
+                    borderColor: '#dc3545',
+                    backgroundColor: '#dc3545',
+                    borderDash: [5, 5],
+                    tension: 0.1,
+                    fill: false
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                x: { title: { display: true, text: 'x' } },
+                y: { title: { display: true, text: 'y' } }
+            }
+        }
+    });
+</script>

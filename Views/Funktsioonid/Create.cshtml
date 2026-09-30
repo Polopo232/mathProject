@@ -1,25 +1,39 @@
-﻿@model mathProject.Data.AppDbContext
+﻿@model mathProject.Models.FunktsiooniUurimine
 
 @{
-    ViewData["Title"] = "Create";
+    ViewData["Title"] = "Lisa uus funktsioon";
 }
 
-<h1>Create</h1>
+<div class="container mt-4" style="max-width: 600px;">
+    <h2>Lisa uus funktsiooni uurimine</h2>
+    <form asp-action="Create" method="post" class="mt-3">
+        <div class="mb-3">
+            <label asp-for="Valem" class="form-label">Valem f(x)</label>
+            <input asp-for="Valem" class="form-control" placeholder="nt x^2 - 4*x + 3" required />
+            <span asp-validation-for="Valem" class="text-danger"></span>
+        </div>
 
-<h4>AppDbContext</h4>
-<hr />
-<div class="row">
-    <div class="col-md-4">
-        <form asp-action="Create">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-            <div class="form-group">
-                <input type="submit" value="Create" class="btn btn-primary" />
-            </div>
-        </form>
-    </div>
+        <div class="mb-3">
+            <label asp-for="Tuletis" class="form-label">Tuletis f'(x)</label>
+            <input asp-for="Tuletis" class="form-control" placeholder="nt 2*x - 4" />
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="Maaramispiirkond" class="form-label">Määramispiirkond</label>
+            <input asp-for="Maaramispiirkond" class="form-control" placeholder="nt X: (-inf, inf)" />
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="KriitilisedPunktid" class="form-label">Kriitilised punktid</label>
+            <input asp-for="KriitilisedPunktid" class="form-control" placeholder="nt x_e = 2" />
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="Ekstreemumid" class="form-label">Ekstreemumid</label>
+            <input asp-for="Ekstreemumid" class="form-control" placeholder="nt min = -1 (kui x = 2)" />
+        </div>
+
+        <button type="submit" class="btn btn-success">Salvesta andmebaasi</button>
+        <a asp-action="Index" class="btn btn-secondary">Tagasi</a>
+    </form>
 </div>
-
-<div>
-    <a asp-action="Index">Back to List</a>
-</div>
-

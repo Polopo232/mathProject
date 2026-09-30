@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace FunktsiooniUurimineApp.Models;
+namespace mathProject.Models;
 
 public class FunktsiooniUurimine
 {

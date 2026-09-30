@@ -1,7 +1,41 @@
-﻿
+﻿@model IEnumerable<mathProject.Models.FunktsiooniUurimine>
+
 @{
-    ViewData["Title"] = "Index";
+    ViewData["Title"] = "Funktsioonide nimekiri";
 }
 
-<h1>Index</h1>
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>Funktsioonide uurimine</h2>
+        <a asp-action="Create" class="btn btn-primary">+ Lisa uus funktsioon</a>
+    </div>
 
+    <table class="table table-striped table-hover align-middle">
+        <thead class="table-dark">
+            <tr>
+                <th>Valem f(x)</th>
+                <th>Tuletis f'(x)</th>
+                <th>Määramispiirkond</th>
+                <th>Loodud aeg</th>
+                <th>Tegevused</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td><strong>@item.Valem</strong></td>
+                    <td>@item.Tuletis</td>
+                    <td>@item.Maaramispiirkond</td>
+                    <td>@item.LuodudAeg.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</td>
+                    <td>
+                        <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-info btn-sm">Vaata graafikut</a>
+                        <form asp-action="Delete" asp-route-id="@item.Id" method="post" class="d-inline" onsubmit="return confirm('Oled kindel?');">
+                            <button type="submit" class="btn btn-danger btn-sm">Kustuta</button>
+                        </form>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
