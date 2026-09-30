@@ -1,4 +1,4 @@
-﻿@model IEnumerable<mathProject.Models.FunktsiooniUurimine>
+@model IEnumerable<mathProject.Models.FunktsiooniUurimine>
 
 @{
     ViewData["Title"] = "Funktsioonide nimekiri";
@@ -30,11 +30,16 @@
                     <td>@item.LuodudAeg.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</td>
                     <td>
                         <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-info btn-sm">Vaata graafikut</a>
+                        <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-warning btn-sm">Muuda</a>
                         <form asp-action="Delete" asp-route-id="@item.Id" method="post" class="d-inline" onsubmit="return confirm('Oled kindel?');">
                             <button type="submit" class="btn btn-danger btn-sm">Kustuta</button>
                         </form>
                     </td>
                 </tr>
+            }
+            @if (!Model.Any())
+            {
+                <tr><td colspan="5" class="text-center text-muted">Funktsioone pole veel lisatud.</td></tr>
             }
         </tbody>
     </table>

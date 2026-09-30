@@ -2,7 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using mathProject.Data;
 using mathProject.Models;
-using NCalc;
+using mathProject.Services;
 
 namespace mathProject.Controllers;
 
@@ -15,6 +15,7 @@ public class FunktsioonidController : Controller
         _context = context;
     }
 
+    // READ: nimekiri
     public async Task<IActionResult> Index()
     {
         var list = await _context.FunktsiooniUurimised
@@ -23,38 +24,79 @@ public class FunktsioonidController : Controller
         return View(list);
     }
 
-    public IActionResult Create() => View();
-
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create(FunktsiooniUurimine olem)
-    {
-        if (ModelState.IsValid)
-        {
-            olem.LuodudAeg = DateTime.UtcNow;
-            _context.FunktsiooniUurimised.Add(olem);
-            await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(Index));
-        }
-        return View(olem);
-    }
-
+    // READ: detailvaade + graafik
     public async Task<IActionResult> Details(int? id)
     {
         if (id == null) return NotFound();
 
-        var olem = await _context.FunktsiooniUurimised
-            .FirstOrDefaultAsync(m => m.Id == id);
-
+        var olem = await _context.FunktsiooniUurimised.FirstOrDefaultAsync(m => m.Id == id);
         if (olem == null) return NotFound();
 
-        ViewBag.XValues = CalculatePoints(olem.Valem, -5, 5, 0.2);
-        ViewBag.YFunction = CalculatePoints(olem.Valem, -5, 5, 0.2, evaluateY: true);
-        ViewBag.YDerivative = CalculatePoints(olem.Tuletis, -5, 5, 0.2, evaluateY: true);
+        // Punktid arvutatakse serveris NCalc-iga: x vahemikus [-10; 10], samm 0.1
+        var xs = FunktsiooniArvutaja.XVaartused(-10, 10, 0.1);
+        ViewBag.XValues = xs;
+        ViewBag.YFunction = FunktsiooniArvutaja.YVaartused(olem.Valem, xs);
+        ViewBag.YDerivative = FunktsiooniArvutaja.YVaartused(olem.Tuletis, xs);
 
         return View(olem);
     }
 
+    // CREATE
+    public IActionResult Create() => View();
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Create(
+        [Bind("Valem,Maaramispiirkond,Tuletis,KriitilisedPunktid,Ekstreemumid")] FunktsiooniUurimine olem)
+    {
+        KontrolliValemeid(olem);
+
+        if (!ModelState.IsValid) return View(olem);
+
+        olem.LuodudAeg = DateTime.UtcNow;
+        _context.FunktsiooniUurimised.Add(olem);
+        await _context.SaveChangesAsync();
+        return RedirectToAction(nameof(Index));
+    }
+
+    // UPDATE
+    public async Task<IActionResult> Edit(int? id)
+    {
+        if (id == null) return NotFound();
+
+        var olem = await _context.FunktsiooniUurimised.FindAsync(id);
+        if (olem == null) return NotFound();
+
+        return View(olem);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Edit(int id,
+        [Bind("Valem,Maaramispiirkond,Tuletis,KriitilisedPunktid,Ekstreemumid")] FunktsiooniUurimine vorm)
+    {
+        var olem = await _context.FunktsiooniUurimised.FindAsync(id);
+        if (olem == null) return NotFound();
+
+        KontrolliValemeid(vorm);
+
+        if (!ModelState.IsValid)
+        {
+            vorm.Id = id;   // et vorm teaks, millist kirjet muudetakse
+            return View(vorm);
+        }
+
+        olem.Valem = vorm.Valem;
+        olem.Maaramispiirkond = vorm.Maaramispiirkond;
+        olem.Tuletis = vorm.Tuletis;
+        olem.KriitilisedPunktid = vorm.KriitilisedPunktid;
+        olem.Ekstreemumid = vorm.Ekstreemumid;
+
+        await _context.SaveChangesAsync();
+        return RedirectToAction(nameof(Details), new { id });
+    }
+
+    // DELETE
     [HttpPost, ActionName("Delete")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteConfirmed(int id)
@@ -67,36 +109,19 @@ public class FunktsioonidController : Controller
         }
         return RedirectToAction(nameof(Index));
     }
-    private List<double> CalculatePoints(string expressionText, double minX, double maxX, double step, bool evaluateY = false)
+
+    // Kontrollib, et valem ja tuletis on NCalc-iga arvutatavad
+    private void KontrolliValemeid(FunktsiooniUurimine olem)
     {
-        var result = new List<double>();
-        if (string.IsNullOrWhiteSpace(expressionText)) return result;
-
-        string normalizedExpr = expressionText.Replace("^", "**");
-
-        for (double x = minX; x <= maxX; x += step)
+        if (!string.IsNullOrWhiteSpace(olem.Valem))
         {
-            x = Math.Round(x, 1);
-            if (!evaluateY)
-            {
-                result.Add(x);
-                continue;
-            }
-
-            try
-            {
-                var expr = new Expression(expressionText.Replace("x", x.ToString(System.Globalization.CultureInfo.InvariantCulture)));
-
-                expr.Parameters["x"] = x;
-
-                object eval = expr.Evaluate();
-                result.Add(Convert.ToDouble(eval));
-            }
-            catch
-            {
-                result.Add(0);
-            }
+            var viga = FunktsiooniArvutaja.Kontrolli(olem.Valem);
+            if (viga != null) ModelState.AddModelError(nameof(olem.Valem), viga);
         }
-        return result;
+        if (!string.IsNullOrWhiteSpace(olem.Tuletis))
+        {
+            var viga = FunktsiooniArvutaja.Kontrolli(olem.Tuletis);
+            if (viga != null) ModelState.AddModelError(nameof(olem.Tuletis), viga);
+        }
     }
 }

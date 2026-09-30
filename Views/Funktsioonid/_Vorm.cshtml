@@ -1,0 +1,59 @@
+@model mathProject.Models.FunktsiooniUurimine
+
+@* Ühine vormi sisu (kasutavad Create ja Edit) *@
+
+<div asp-validation-summary="ModelOnly" class="text-danger small"></div>
+
+<div class="mb-1">
+    <label asp-for="Valem" class="form-label small text-muted"></label>
+    <div class="input-group">
+        <input asp-for="Valem" id="valemInput" class="form-control" placeholder="nt x^2 - 4*x + 3" />
+        <button type="button" class="btn btn-light border" onclick="insertSymbolToId('valemInput', '^2')">x²</button>
+        <button type="button" class="btn btn-light border" onclick="insertSymbolToId('valemInput', '^3')">x³</button>
+        <button type="button" class="btn btn-light border" onclick="insertSymbolToId('valemInput', '*')">×</button>
+    </div>
+    <span asp-validation-for="Valem" class="text-danger small"></span>
+</div>
+<div class="form-text mb-3">Korrutamiseks kasuta * (nt 2*x), astme jaoks ^, lubatud on ka sin(x), cos(x), sqrt(x), abs(x).</div>
+
+<div class="mb-3">
+    <label asp-for="Tuletis" class="form-label small text-muted"></label>
+    <div class="input-group">
+        <input asp-for="Tuletis" id="tuletisInput" class="form-control" placeholder="nt 2*x - 4" />
+        <button type="button" class="btn btn-light border" onclick="insertSymbolToId('tuletisInput', '^2')">x²</button>
+        <button type="button" class="btn btn-light border" onclick="insertSymbolToId('tuletisInput', '*')">×</button>
+    </div>
+    <span asp-validation-for="Tuletis" class="text-danger small"></span>
+</div>
+
+<div class="row g-2 mb-3">
+    <div class="col-md-6">
+        <label asp-for="Maaramispiirkond" class="form-label small text-muted"></label>
+        <input asp-for="Maaramispiirkond" id="maaramisInput" class="form-control" placeholder="nt X: (-inf, inf)" />
+        <span asp-validation-for="Maaramispiirkond" class="text-danger small"></span>
+    </div>
+    <div class="col-md-6">
+        <label asp-for="KriitilisedPunktid" class="form-label small text-muted"></label>
+        <input asp-for="KriitilisedPunktid" id="kriitilisedInput" class="form-control" placeholder="nt x = 2" />
+        <span asp-validation-for="KriitilisedPunktid" class="text-danger small"></span>
+    </div>
+</div>
+
+<div class="mb-4">
+    <label asp-for="Ekstreemumid" class="form-label small text-muted"></label>
+    <input asp-for="Ekstreemumid" id="ekstreemumidInput" class="form-control" placeholder="nt min = -1 (kui x = 2)" />
+    <span asp-validation-for="Ekstreemumid" class="text-danger small"></span>
+</div>
+
+<script>
+    // Lisab sümboli kursori kohale valitud väljas
+    function insertSymbolToId(elementId, symbol) {
+        const input = document.getElementById(elementId);
+        const start = input.selectionStart;
+        const end = input.selectionEnd;
+        const text = input.value;
+        input.value = text.substring(0, start) + symbol + text.substring(end);
+        input.focus();
+        input.selectionStart = input.selectionEnd = start + symbol.length;
+    }
+</script>

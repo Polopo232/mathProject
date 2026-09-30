@@ -1,11 +1,10 @@
-﻿@model mathProject.Models.FunktsiooniUurimine
+@model mathProject.Models.FunktsiooniUurimine
 
 @{
     ViewData["Title"] = "Lisa uus funktsioon";
 }
 
 <div class="container mt-4" style="max-width: 650px;">
-    <!-- Заголовок и главная кнопка -->
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h3 class="fw-normal m-0">Uue funktsiooni lisamine</h3>
         <button type="button" class="btn btn-outline-dark btn-sm" onclick="generateRandomFunction()">
@@ -13,7 +12,7 @@
         </button>
     </div>
 
-    <!-- Быстрые шаблоны -->
+    <!-- Kiired mallid -->
     <div class="mb-3">
         <div class="btn-group btn-group-sm w-100" role="group">
             <button type="button" class="btn btn-outline-secondary" onclick="applyTemplate('x^2 - 4*x + 3', '2*x - 4', 'X: (-inf, inf)', 'x = 2', 'min = -1 (kui x = 2)')">Ruutfunktsioon</button>
@@ -23,55 +22,18 @@
     </div>
 
     <form asp-action="Create" method="post">
-        <!-- Поле Valem (Формула) -->
-        <div class="mb-3">
-            <label asp-for="Valem" class="form-label small text-muted">Valem f(x)</label>
-            <div class="input-group">
-                <input asp-for="Valem" id="valemInput" class="form-control" placeholder="nt x^2 - 4*x + 3" required />
-                <button type="button" class="btn btn-light border" onclick="insertSymbol('^2')">x²</button>
-                <button type="button" class="btn btn-light border" onclick="insertSymbol('^3')">x³</button>
-                <button type="button" class="btn btn-light border" onclick="insertSymbol('*')">×</button>
-            </div>
-            <span asp-validation-for="Valem" class="text-danger small"></span>
-        </div>
+        <partial name="_Vorm" model="Model" />
 
-        <!-- Поле Tuletis (Производная) -->
-        <div class="mb-3">
-            <label asp-for="Tuletis" class="form-label small text-muted">Tuletis f'(x)</label>
-            <div class="input-group">
-                <input asp-for="Tuletis" id="tuletisInput" class="form-control" placeholder="nt 2*x - 4" />
-                <button type="button" class="btn btn-light border" onclick="insertSymbolToId('tuletisInput', '^2')">x²</button>
-                <button type="button" class="btn btn-light border" onclick="insertSymbolToId('tuletisInput', '*')">×</button>
-            </div>
-        </div>
-
-        <div class="row g-2 mb-3">
-            <!-- Поле Maaramispiirkond -->
-            <div class="col-md-6">
-                <label asp-for="Maaramispiirkond" class="form-label small text-muted">Määramispiirkond</label>
-                <input asp-for="Maaramispiirkond" id="maaramisInput" class="form-control" placeholder="nt X: (-inf, inf)" />
-            </div>
-
-            <!-- Поле KriitilisedPunktid -->
-            <div class="col-md-6">
-                <label asp-for="KriitilisedPunktid" class="form-label small text-muted">Kriitilised punktid</label>
-                <input asp-for="KriitilisedPunktid" id="kriitilisedInput" class="form-control" placeholder="nt x = 2" />
-            </div>
-        </div>
-
-        <!-- Поле Ekstreemumid -->
-        <div class="mb-4">
-            <label asp-for="Ekstreemumid" class="form-label small text-muted">Ekstreemumid</label>
-            <input asp-for="Ekstreemumid" id="ekstreemumidInput" class="form-control" placeholder="nt min = -1 (kui x = 2)" />
-        </div>
-
-        <!-- Кнопки действий -->
         <div class="d-flex justify-content-between align-items-center pt-2 border-top">
             <a asp-action="Index" class="btn btn-link text-decoration-none text-secondary p-0">← Tagasi nimekirja</a>
             <button type="submit" class="btn btn-primary px-4">Salvesta</button>
         </div>
     </form>
 </div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
 
 <script>
     const randomPresets = [
@@ -92,19 +54,5 @@
         document.getElementById('maaramisInput').value = maaramis;
         document.getElementById('kriitilisedInput').value = kriitilised;
         document.getElementById('ekstreemumidInput').value = ekstreemumid;
-    }
-
-    function insertSymbol(symbol) {
-        insertSymbolToId('valemInput', symbol);
-    }
-
-    function insertSymbolToId(elementId, symbol) {
-        const input = document.getElementById(elementId);
-        const start = input.selectionStart;
-        const end = input.selectionEnd;
-        const text = input.value;
-        input.value = text.substring(0, start) + symbol + text.substring(end);
-        input.focus();
-        input.selectionStart = input.selectionEnd = start + symbol.length;
     }
 </script>

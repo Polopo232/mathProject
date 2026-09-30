@@ -1,37 +1,62 @@
-﻿@model mathProject.Models.FunktsiooniUurimine
+@model mathProject.Models.FunktsiooniUurimine
 
 @{
     ViewData["Title"] = "Graafik ja detailid";
-    var xVals = System.Text.Json.JsonSerializer.Serialize(ViewBag.XValues ?? new List<double>());
-    var yFunc = System.Text.Json.JsonSerializer.Serialize(ViewBag.YFunction ?? new List<double>());
-    var yDeriv = System.Text.Json.JsonSerializer.Serialize(ViewBag.YDerivative ?? new List<double>());
 }
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
+<script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1"></script>
 
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h3 class="m-0">Funktsiooni analüüs: <code>f(x) = @Model.Valem</code></h3>
         <button type="button" class="btn btn-outline-secondary btn-sm" onclick="resetZoom()">
-            ↺ Taasta vaade (Reset Zoom)
+            ↺ Taasta vaade
         </button>
     </div>
 
     <div class="card p-3 my-3">
         <canvas id="funktsiooniGraafik" width="600" height="350"></canvas>
+        <div class="text-muted small mt-2">Hiirerull = suurendamine, lohistamine = liigutamine.</div>
     </div>
 
-    <a asp-action="Index" class="btn btn-outline-secondary">Tagasi nimekirja</a>
+    <table class="table table-sm">
+        <tbody>
+            <tr><th style="width: 220px;">Valem f(x)</th><td>@Model.Valem</td></tr>
+            <tr><th>Tuletis f'(x)</th><td>@Model.Tuletis</td></tr>
+            <tr><th>Määramispiirkond</th><td>@Model.Maaramispiirkond</td></tr>
+            <tr><th>Kriitilised punktid</th><td>@Model.KriitilisedPunktid</td></tr>
+            <tr><th>Ekstreemumid</th><td>@Model.Ekstreemumid</td></tr>
+            <tr><th>Loodud</th><td>@Model.LuodudAeg.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</td></tr>
+        </tbody>
+    </table>
+
+    <div class="d-flex gap-2">
+        <a asp-action="Index" class="btn btn-outline-secondary">Tagasi nimekirja</a>
+        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning">Muuda</a>
+        <form asp-action="Delete" asp-route-id="@Model.Id" method="post" onsubmit="return confirm('Oled kindel?');">
+            <button type="submit" class="btn btn-danger">Kustuta</button>
+        </form>
+    </div>
 </div>
 
 <script>
-    const xVaartused = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.XValues ?? new List<double>()));
-    const yFunktsioon = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.YFunction ?? new List<double>()));
-    const yTuletis = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.YDerivative ?? new List<double>()));
+    // Andmed serverist (arvutatud NCalc-iga). null = punkt, kus väärtust pole.
+    const xVaartused  = @Json.Serialize((List<double>)ViewBag.XValues);
+    const yFunktsioon = @Json.Serialize((List<double?>)ViewBag.YFunction);
+    const yTuletis    = @Json.Serialize((List<double?>)ViewBag.YDerivative);
+
+    const valem   = @Json.Serialize(Model.Valem);
+    const tuletis = @Json.Serialize(Model.Tuletis);
 
     const datasetF = xVaartused.map((x, i) => ({ x: x, y: yFunktsioon[i] }));
     const datasetD = xVaartused.map((x, i) => ({ x: x, y: yTuletis[i] }));
+
+    const teljeGrid = {
+        color: (context) => context.tick.value === 0 ? '#000000' : '#e0e0e0',
+        lineWidth: (context) => context.tick.value === 0 ? 2 : 1
+    };
 
     const ctx = document.getElementById('funktsiooniGraafik').getContext('2d');
 
@@ -40,42 +65,38 @@
         data: {
             datasets: [
                 {
-                    label: 'f(x) = ' + '@Model.Valem',
+                    label: 'f(x) = ' + valem,
                     data: datasetF,
                     showLine: true,
                     borderColor: '#0d6efd',
                     borderWidth: 2.5,
                     backgroundColor: '#0d6efd',
-                    pointRadius: 0,
-                    tension: 0.1
+                    pointRadius: 0
                 },
                 {
-                    label: "f'(x) = " + '@Model.Tuletis',
+                    label: "f'(x) = " + tuletis,
                     data: datasetD,
                     showLine: true,
                     borderColor: '#dc3545',
                     borderWidth: 2,
                     borderDash: [6, 6],
                     backgroundColor: '#dc3545',
-                    pointRadius: 0,
-                    tension: 0.1
+                    pointRadius: 0
                 }
             ]
         },
         options: {
             responsive: true,
             maintainAspectRatio: true,
+            animation: false,
             scales: {
                 x: {
                     type: 'linear',
                     position: 'center',
-                    min: -10,
-                    max: 10,
+                    min: -5,
+                    max: 5,
                     title: { display: true, text: 'X', font: { weight: 'bold', size: 14 } },
-                    grid: {
-                        color: (context) => context.tick.value === 0 ? '#000000' : '#e0e0e0',
-                        lineWidth: (context) => context.tick.value === 0 ? 2 : 1
-                    }
+                    grid: teljeGrid
                 },
                 y: {
                     type: 'linear',
@@ -83,32 +104,19 @@
                     min: -10,
                     max: 10,
                     title: { display: true, text: 'Y', font: { weight: 'bold', size: 14 } },
-                    grid: {
-                        color: (context) => context.tick.value === 0 ? '#000000' : '#e0e0e0',
-                        lineWidth: (context) => context.tick.value === 0 ? 2 : 1
-                    }
+                    grid: teljeGrid
                 }
             },
             plugins: {
                 legend: { position: 'top' },
                 zoom: {
-                    pan: {
-                        enabled: true,
-                        mode: 'xy'
-                    },
-                    zoom: {
-                        wheel: {
-                            enabled: true
-                        },
-                        pinch: {
-                            enabled: true
-                        },
-                        mode: 'xy'
-                    }
+                    pan: { enabled: true, mode: 'xy' },
+                    zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'xy' }
                 }
             }
         }
     });
+
     function resetZoom() {
         myChart.resetZoom();
     }
