@@ -1,59 +1,147 @@
 @model mathProject.Models.FunktsiooniUurimine
 
-@* Ühine vormi sisu (kasutavad Create ja Edit) *@
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
 
-<div asp-validation-summary="ModelOnly" class="text-danger small"></div>
-
-<div class="mb-1">
-    <label asp-for="Valem" class="form-label small text-muted"></label>
-    <div class="input-group">
-        <input asp-for="Valem" id="valemInput" class="form-control" placeholder="nt x^2 - 4*x + 3" />
-        <button type="button" class="btn btn-light border" onclick="insertSymbolToId('valemInput', '^2')">x²</button>
-        <button type="button" class="btn btn-light border" onclick="insertSymbolToId('valemInput', '^3')">x³</button>
-        <button type="button" class="btn btn-light border" onclick="insertSymbolToId('valemInput', '*')">×</button>
-    </div>
-    <span asp-validation-for="Valem" class="text-danger small"></span>
-</div>
-<div class="form-text mb-3">Korrutamiseks kasuta * (nt 2*x), astme jaoks ^, lubatud on ka sin(x), cos(x), sqrt(x), abs(x).</div>
+<div asp-validation-summary="ModelOnly" class="text-danger small mb-2"></div>
 
 <div class="mb-3">
-    <label asp-for="Tuletis" class="form-label small text-muted"></label>
-    <div class="input-group">
-        <input asp-for="Tuletis" id="tuletisInput" class="form-control" placeholder="nt 2*x - 4" />
-        <button type="button" class="btn btn-light border" onclick="insertSymbolToId('tuletisInput', '^2')">x²</button>
-        <button type="button" class="btn btn-light border" onclick="insertSymbolToId('tuletisInput', '*')">×</button>
+    <div class="small fw-bold text-muted mb-1">Kiirvalikud:</div>
+    <div class="d-flex flex-wrap gap-1">
+        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="applyTemplate('(x^2 - 4) / (x^2 - 1)')">Murdfunktsioon (x²-4)/(x²-1)</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="applyTemplate('e^x')">Eksponent e^x</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="applyTemplate('(2*x + 4) / (x - 2)')">Murd (2x+4)/(x-2)</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="applyTemplate('x^2 - 4*x + 3')">Ruutfunktsioon</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="applyTemplate('x^3 - 3*x')">Kuupfunktsioon</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="applyTemplate('1 / x')">Hüperbool 1/x</button>
     </div>
-    <span asp-validation-for="Tuletis" class="text-danger small"></span>
+</div>
+
+<div class="card p-3 mb-3 bg-light border-0 shadow-sm">
+    <label asp-for="Valem" class="form-label fw-bold">Sisesta funktsiooni valem f(x):</label>
+    <div class="input-group mb-2">
+        <input asp-for="Valem" id="valemInput" class="form-control form-control-lg font-monospace"
+               placeholder="nt (x^2 - 4) / (x^2 - 1) või e^x" oninput="updateLiveMathPreview()" required />
+        <button type="button" class="btn btn-primary px-3 fw-bold" onclick="triggerAutoCalc()">
+            ⚡ Arvuta automaatselt
+        </button>
+    </div>
+
+    <div class="p-3 mb-2 bg-white rounded border text-center" style="min-height: 60px;">
+        <span class="small text-muted d-block mb-1">Matemaatiline eelvaade:</span>
+        <div id="liveMathPreview" class="fs-4 text-primary font-monospace">f(x) = ...</div>
+    </div>
+
+    <div class="d-flex flex-wrap align-items-center gap-1 mb-2">
+        <span class="small text-muted me-1">Sümbolid:</span>
+        <button type="button" class="btn btn-sm btn-white border shadow-sm px-2 fw-bold" onclick="insertSymbol('valemInput', 'e')">e</button>
+        <button type="button" class="btn btn-sm btn-white border shadow-sm px-2 fw-bold" onclick="insertSymbol('valemInput', 'e^x')">e^x</button>
+        <button type="button" class="btn btn-sm btn-white border shadow-sm px-2" onclick="insertSymbol('valemInput', '(')">(</button>
+        <button type="button" class="btn btn-sm btn-white border shadow-sm px-2" onclick="insertSymbol('valemInput', ')')">)</button>
+        <button type="button" class="btn btn-sm btn-white border shadow-sm px-2 fw-bold" onclick="insertSymbol('valemInput', ' / ')">÷</button>
+        <button type="button" class="btn btn-sm btn-white border shadow-sm px-2" onclick="insertSymbol('valemInput', '^2')">x²</button>
+        <button type="button" class="btn btn-sm btn-white border shadow-sm px-2" onclick="insertSymbol('valemInput', '^3')">x³</button>
+        <button type="button" class="btn btn-sm btn-white border shadow-sm px-2" onclick="insertSymbol('valemInput', '*')">×</button>
+        <button type="button" class="btn btn-sm btn-white border shadow-sm px-2" onclick="insertSymbol('valemInput', '+')">+</button>
+        <button type="button" class="btn btn-sm btn-white border shadow-sm px-2" onclick="insertSymbol('valemInput', '-')">−</button>
+        <button type="button" class="btn btn-sm btn-outline-dark ms-auto" onclick="smartFixFormula()">
+            ✨ Korrasta valem
+        </button>
+    </div>
 </div>
 
 <div class="row g-2 mb-3">
     <div class="col-md-6">
-        <label asp-for="Maaramispiirkond" class="form-label small text-muted"></label>
-        <input asp-for="Maaramispiirkond" id="maaramisInput" class="form-control" placeholder="nt X: (-inf, inf)" />
-        <span asp-validation-for="Maaramispiirkond" class="text-danger small"></span>
+        <label asp-for="Tuletis" class="form-label small text-muted">Tuletis f'(x)</label>
+        <input asp-for="Tuletis" id="tuletisInput" class="form-control font-monospace" placeholder="Arvutatakse..." />
+        <span asp-validation-for="Tuletis" class="text-danger small"></span>
     </div>
     <div class="col-md-6">
-        <label asp-for="KriitilisedPunktid" class="form-label small text-muted"></label>
-        <input asp-for="KriitilisedPunktid" id="kriitilisedInput" class="form-control" placeholder="nt x = 2" />
-        <span asp-validation-for="KriitilisedPunktid" class="text-danger small"></span>
+        <label asp-for="Maaramispiirkond" class="form-label small text-muted">Määramispiirkond</label>
+        <input asp-for="Maaramispiirkond" id="maaramisInput" class="form-control font-monospace" placeholder="Arvutatakse..." />
+        <span asp-validation-for="Maaramispiirkond" class="text-danger small"></span>
     </div>
 </div>
 
-<div class="mb-4">
-    <label asp-for="Ekstreemumid" class="form-label small text-muted"></label>
-    <input asp-for="Ekstreemumid" id="ekstreemumidInput" class="form-control" placeholder="nt min = -1 (kui x = 2)" />
-    <span asp-validation-for="Ekstreemumid" class="text-danger small"></span>
+<div class="row g-2 mb-3">
+    <div class="col-md-6">
+        <label asp-for="KriitilisedPunktid" class="form-label small text-muted">Kriitilised punktid / Nullkohad</label>
+        <input asp-for="KriitilisedPunktid" id="kriitilisedInput" class="form-control font-monospace" placeholder="Arvutatakse..." />
+        <span asp-validation-for="KriitilisedPunktid" class="text-danger small"></span>
+    </div>
+    <div class="col-md-6">
+        <label asp-for="Ekstreemumid" class="form-label small text-muted">Ekstreemumid</label>
+        <input asp-for="Ekstreemumid" id="ekstreemumidInput" class="form-control font-monospace" placeholder="Arvutatakse..." />
+        <span asp-validation-for="Ekstreemumid" class="text-danger small"></span>
+    </div>
 </div>
 
 <script>
-    // Lisab sümboli kursori kohale valitud väljas
-    function insertSymbolToId(elementId, symbol) {
+    function insertSymbol(elementId, symbol) {
         const input = document.getElementById(elementId);
         const start = input.selectionStart;
         const end = input.selectionEnd;
-        const text = input.value;
-        input.value = text.substring(0, start) + symbol + text.substring(end);
+        input.value = input.value.substring(0, start) + symbol + input.value.substring(end);
         input.focus();
         input.selectionStart = input.selectionEnd = start + symbol.length;
+        updateLiveMathPreview();
     }
+
+    function applyTemplate(formula) {
+        document.getElementById('valemInput').value = formula;
+        updateLiveMathPreview();
+        triggerAutoCalc();
+    }
+
+    function smartFixFormula() {
+        let v = document.getElementById('valemInput').value;
+        v = v.replace(/(\d)([a-zA-Z(])/g, '$1*$2');
+        v = v.replace(/([a-zA-Z)])(\()/g, '$1*$2');         v = v.replace(/(\))([a-zA-Z0-9])/g, '$1*$2');
+        document.getElementById('valemInput').value = v;
+        updateLiveMathPreview();
+    }
+
+    function updateLiveMathPreview() {
+        const val = document.getElementById('valemInput').value.trim();
+        const previewEl = document.getElementById('liveMathPreview');
+        if (!val) {
+            previewEl.innerHTML = 'f(x) = ...';
+            return;
+        }
+
+        let latex = val.replace(/\*/g, ' \\cdot ');
+        const slashIdx = latex.indexOf('/');
+        if (slashIdx !== -1) {
+            let num = latex.substring(0, slashIdx).trim().replace(/^\(\vert{}\)$/g, '');
+            let den = latex.substring(slashIdx + 1).trim().replace(/^\(\vert{}\)$/g, '');
+            latex = `\\frac{${num}}{${den}}`;
+        }
+
+        if (window.katex) {
+            try {
+                katex.render(`f(x) = ${latex}`, previewEl, { throwOnError: false });
+            } catch (e) {
+                previewEl.innerText = `f(x) = ${val}`;
+            }
+        }
+    }
+
+    async function triggerAutoCalc() {
+        smartFixFormula();
+        const valem = document.getElementById('valemInput').value.trim();
+        if (!valem) return;
+
+        try {
+            const resp = await fetch(`/Funktsioonid/AutoCalculate?valem=${encodeURIComponent(valem)}`);
+            if (!resp.ok) return;
+            const data = await resp.json();
+
+            document.getElementById('tuletisInput').value = data.tuletis || '';
+            document.getElementById('maaramispiirkond').value = data.maaramispiirkond || '';
+            document.getElementById('kriitilisedInput').value = data.kriitilisedPunktid || '';
+            document.getElementById('ekstreemumidInput').value = data.ekstreemumid || '';
+        } catch (e) {}
+    }
+
+    window.addEventListener('DOMContentLoaded', updateLiveMathPreview);
 </script>

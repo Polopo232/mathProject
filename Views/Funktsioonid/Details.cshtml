@@ -1,123 +1,407 @@
 @model mathProject.Models.FunktsiooniUurimine
+@using System.Text.Encodings.Web
 
 @{
-    ViewData["Title"] = "Graafik ja detailid";
+    ViewData["Title"] = "Funktsiooni põhjalik uurimine";
+    var analuus = ViewBag.Analuus as mathProject.Services.AnaluusiTulemus;
 }
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}], throwOnError: false});"></script>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
 <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1"></script>
 
-<div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h3 class="m-0">Funktsiooni analüüs: <code>f(x) = @Model.Valem</code></h3>
-        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="resetZoom()">
-            ↺ Taasta vaade
-        </button>
+<div class="container my-4" style="max-width: 1080px;">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <a asp-action="Index" class="text-decoration-none small text-muted">← Tagasi nimekirja</a>
+            <div class="d-flex align-items-center gap-3 mt-1">
+                <h3 class="m-0 fw-bold">Uurimine:</h3>
+                <span class="fs-4 p-2 px-3 bg-white border border-primary-subtle rounded shadow-sm text-primary">
+                    $$f(x) = @(analuus?.ValemLatex ?? Model.Valem)$$
+                </span>
+            </div>
+        </div>
+        <div class="d-flex gap-2">
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-secondary btn-sm">Muuda</a>
+            <form asp-action="Delete" asp-route-id="@Model.Id" method="post" onsubmit="return confirm('Oled kindel?');">
+                <button type="submit" class="btn btn-outline-danger btn-sm">Kustuta</button>
+            </form>
+        </div>
     </div>
 
-    <div class="card p-3 my-3">
-        <canvas id="funktsiooniGraafik" width="600" height="350"></canvas>
-        <div class="text-muted small mt-2">Hiirerull = suurendamine, lohistamine = liigutamine.</div>
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body p-4">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 pb-2 border-bottom">
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <span class="small fw-bold text-secondary">Graafiku kihid:</span>
+                    <button type="button" id="btnLayer0" class="btn btn-sm btn-primary fw-bold" onclick="toggleLayer(0)">📈 f(x)</button>
+                    <button type="button" id="btnLayer1" class="btn btn-sm btn-outline-danger fw-bold" onclick="toggleLayer(1)">📉 f'(x) tuletis</button>
+                    <button type="button" id="btnLayer2" class="btn btn-sm btn-outline-success fw-bold" onclick="toggleLayer(2)">📍 Põhipunktid</button>
+                </div>
+                <div class="btn-group btn-group-sm">
+                    <button type="button" class="btn btn-light border" onclick="zoomChart(1.25)">+ Suurenda</button>
+                    <button type="button" class="btn btn-light border" onclick="zoomChart(0.8)">− Vähenda</button>
+                    <button type="button" class="btn btn-light border" onclick="resetChartView()">↺ Taasta vaade</button>
+                </div>
+            </div>
+
+            <div style="position: relative; height: 520px; width: 100%;">
+                <canvas id="funktsiooniGraafik"></canvas>
+            </div>
+            <div class="text-muted text-center small mt-2">
+                Koordinaatteljestikku saab vabalt kerida ja suumida.
+            </div>
+        </div>
     </div>
 
-    <table class="table table-sm">
-        <tbody>
-            <tr><th style="width: 220px;">Valem f(x)</th><td>@Model.Valem</td></tr>
-            <tr><th>Tuletis f'(x)</th><td>@Model.Tuletis</td></tr>
-            <tr><th>Määramispiirkond</th><td>@Model.Maaramispiirkond</td></tr>
-            <tr><th>Kriitilised punktid</th><td>@Model.KriitilisedPunktid</td></tr>
-            <tr><th>Ekstreemumid</th><td>@Model.Ekstreemumid</td></tr>
-            <tr><th>Loodud</th><td>@Model.LuodudAeg.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</td></tr>
-        </tbody>
-    </table>
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-white py-3">
+            <h5 class="m-0 fw-bold">Põhjalik uurimistulemus ja samm-sammuline lahenduskäik</h5>
+        </div>
+        <div class="card-body p-4">
 
-    <div class="d-flex gap-2">
-        <a asp-action="Index" class="btn btn-outline-secondary">Tagasi nimekirja</a>
-        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning">Muuda</a>
-        <form asp-action="Delete" asp-route-id="@Model.Id" method="post" onsubmit="return confirm('Oled kindel?');">
-            <button type="submit" class="btn btn-danger">Kustuta</button>
-        </form>
+            @{
+                void RenderEducationalRow(string id, mathProject.Services.OmaduseInfo? info)
+                {
+                    if (info == null) return;
+                    <div class="border-bottom py-3">
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="fw-bold">@info.Nimetus</span>
+
+                                <button type="button" class="btn btn-outline-info btn-sm rounded-circle py-0 px-2 fw-bold"
+                                        style="font-size: 0.85rem; line-height: 1.5;"
+                                        title="Teooria ja abivalemid"
+                                        onclick="openTeooriaModal('@info.Nimetus', '@Html.Raw(JavaScriptEncoder.Default.Encode(info.MisSeeOn))', '@Html.Raw(JavaScriptEncoder.Default.Encode(info.ValemidJaReeglid))', '@Html.Raw(JavaScriptEncoder.Default.Encode(info.GeomeetrilineTahendus))')">
+                                    !
+                                </button>
+
+                                <span class="p-1 px-2 bg-light border rounded font-monospace fs-6">
+                                    $@(string.IsNullOrEmpty(info.VaartusLatex) ? info.Vaartus : info.VaartusLatex)$
+                                </span>
+                            </div>
+
+                            <button class="btn btn-outline-primary btn-sm px-3" type="button" data-bs-toggle="collapse" data-bs-target="#@id">
+                                Näita lahendust ▾
+                            </button>
+                        </div>
+
+                        <div class="collapse mt-3 bg-light p-3 rounded border-start border-4 border-primary" id="@id">
+                            <h6 class="fw-bold text-primary mb-3">📐 Samm-sammuline lahenduskäik:</h6>
+                            <div class="d-flex flex-column gap-2">
+                                @if (info.Sammud != null && info.Sammud.Any())
+                                {
+                                    @foreach (var samm in info.Sammud)
+                                    {
+                                        <div class="p-2 bg-white rounded border-sm shadow-sm small">
+                                            @samm
+                                        </div>
+                                    }
+                                }
+                                else
+                                {
+                                    <div class="p-2 bg-white rounded border-sm shadow-sm small text-muted">
+                                        Väärtus arvutatakse otse funktsiooni valemist: @info.Vaartus
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+
+            @{
+                RenderEducationalRow("solX", analuus?.MaaramispiirkondX);
+            }
+            @{
+                RenderEducationalRow("solY", analuus?.MuutumispiirkondY);
+            }
+            @{
+                RenderEducationalRow("solY0", analuus?.YLoikepunkt);
+            }
+            @{
+                RenderEducationalRow("solNull", analuus?.Nullkohad);
+            }
+            @{
+                RenderEducationalRow("solMargid", analuus?.Margipiirkonnad);
+            }
+            @{
+                RenderEducationalRow("solHarud", analuus?.HarudJaKumerus);
+            }
+            @{
+                RenderEducationalRow("solPaarsus", analuus?.Paarsus);
+            }
+            @{
+                RenderEducationalRow("solEkstr", analuus?.Ekstreemumid);
+            }
+
+            <div class="text-center mt-3">
+                <button class="btn btn-outline-secondary btn-sm px-4" type="button" data-bs-toggle="collapse" data-bs-target="#veelAndmed">
+                    Veel (Näita tuletist ja lisaandmeid) ▾
+                </button>
+            </div>
+
+            <div class="collapse mt-3" id="veelAndmed">
+                @{
+                    RenderEducationalRow("solTuletis1", analuus?.TuletisInfo);
+                }
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="teooriaModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-light">
+                <h5 class="modal-title fw-bold" id="teooriaPealkiri">Teooria ja abivalemid</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Sulge"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="mb-3">
+                    <h6 class="fw-bold text-primary mb-1">Mis see on?</h6>
+                    <p id="teooriaMisSeeOn" class="text-secondary small mb-0"></p>
+                </div>
+                <hr />
+                <div class="mb-3">
+                    <h6 class="fw-bold text-success mb-1">Abivalemid ja reeglid</h6>
+                    <div id="teooriaValemid" class="p-2 bg-light rounded text-center small text-dark border"></div>
+                </div>
+                <hr />
+                <div>
+                    <h6 class="fw-bold text-dark mb-1">Tähendus graafikul</h6>
+                    <p id="teooriaGeomeetriline" class="text-muted small mb-0"></p>
+                </div>
+            </div>
+            <div class="modal-footer bg-light py-2">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Sulge</button>
+            </div>
+        </div>
     </div>
 </div>
 
 <script>
-    // Andmed serverist (arvutatud NCalc-iga). null = punkt, kus väärtust pole.
-    const xVaartused  = @Json.Serialize((List<double>)ViewBag.XValues);
-    const yFunktsioon = @Json.Serialize((List<double?>)ViewBag.YFunction);
-    const yTuletis    = @Json.Serialize((List<double?>)ViewBag.YDerivative);
+    function openTeooriaModal(pealkiri, misSeeOn, valemid, geo) {
+        document.getElementById('teooriaPealkiri').innerText = pealkiri;
+        document.getElementById('teooriaMisSeeOn').innerText = misSeeOn;
+        document.getElementById('teooriaGeomeetriline').innerText = geo;
 
-    const valem   = @Json.Serialize(Model.Valem);
-    const tuletis = @Json.Serialize(Model.Tuletis);
+        const valemEl = document.getElementById('teooriaValemid');
+        if (window.katex) {
+            try { katex.render(valemid, valemEl, { displayMode: true, throwOnError: false }); }
+            catch(e) { valemEl.innerText = valemid; }
+        } else {
+            valemEl.innerText = valemid;
+        }
 
-    const datasetF = xVaartused.map((x, i) => ({ x: x, y: yFunktsioon[i] }));
-    const datasetD = xVaartused.map((x, i) => ({ x: x, y: yTuletis[i] }));
+        new bootstrap.Modal(document.getElementById('teooriaModal')).show();
+    }
 
-    const teljeGrid = {
-        color: (context) => context.tick.value === 0 ? '#000000' : '#e0e0e0',
-        lineWidth: (context) => context.tick.value === 0 ? 2 : 1
-    };
+    const rawF  = @Json.Serialize(ViewBag.ValemF);
+    const markepunktid = @Json.Serialize(ViewBag.Markepunktid);
+
+    function compileMath(str) {
+        if (!str || str.trim() === '') return null;
+        try {
+            let s = str.trim().replace(/\s+/g, '');
+            s = s.replace(/(?<![a-zA-Z0-9_])e\^([a-zA-Z0-9_\.]+)/gi, 'Math.pow(Math.E,$1)');
+            s = s.replace(/(?<![a-zA-Z0-9_])e\^\(([^)]+)\)/gi, 'Math.pow(Math.E,$1)');
+            s = s.replace(/(?<![a-zA-Z0-9_])e(?![a-zA-Z0-9_])/gi, 'Math.E');
+            s = s.replace(/(?<![a-zA-Z0-9_])pi(?![a-zA-Z0-9_])/gi, 'Math.PI');
+            s = s.replace(/([a-zA-Z0-9_\.\)]+)\^([a-zA-Z0-9_\.]+)/g, 'Math.pow($1,$2)');
+            s = s.replace(/([a-zA-Z0-9_\.\)]+)\^\(([^)]+)\)/g, 'Math.pow($1,$2)');
+            return new Function('x', `
+                try {
+                    const y = ${s};
+                    if (!isFinite(y) || Math.abs(y) > 90) return null;
+                    return y;
+                } catch(e) { return null; }
+            `);
+        } catch (e) {
+            return null;
+        }
+    }
+
+    const fnF = compileMath(rawF);
+
+    function generateDatasetPoints(fn, minX, maxX, count = 550) {
+        if (!fn) return [];
+        const span = maxX - minX;
+        const startX = minX - span * 0.25;
+        const endX = maxX + span * 0.25;
+        const step = (endX - startX) / count;
+
+        const points = [];
+        let prevY = null;
+        for (let i = 0; i <= count; i++) {
+            const x = startX + i * step;
+            const y = fn(x);
+
+            if (y !== null && prevY !== null && Math.abs(y - prevY) > 35) {
+                points.push({ x: x - step * 0.5, y: null });
+            }
+
+            points.push({ x: Number(x.toFixed(4)), y: y !== null ? Number(y.toFixed(4)) : null });
+            prevY = y;
+        }
+        return points;
+    }
+
+    function generateDerivativePoints(fn, minX, maxX, count = 550) {
+        if (!fn) return [];
+        const span = maxX - minX;
+        const startX = minX - span * 0.25;
+        const endX = maxX + span * 0.25;
+        const step = (endX - startX) / count;
+        const h = 0.0001;
+
+        const points = [];
+        let prevY = null;
+        for (let i = 0; i <= count; i++) {
+            const x = startX + i * step;
+            const y1 = fn(x + h);
+            const y0 = fn(x - h);
+
+            let d = null;
+            if (y1 !== null && y0 !== null) {
+                const val = (y1 - y0) / (2 * h);
+                if (isFinite(val) && Math.abs(val) <= 80) {
+                    d = val;
+                }
+            }
+
+            if (d !== null && prevY !== null && Math.abs(d - prevY) > 35) {
+                points.push({ x: x - step * 0.5, y: null });
+            }
+
+            points.push({ x: Number(x.toFixed(4)), y: d !== null ? Number(d.toFixed(4)) : null });
+            prevY = d;
+        }
+        return points;
+    }
+
+    let curMinX = -8;
+    let curMaxX = 8;
+    const visibility = [true, false, false];
 
     const ctx = document.getElementById('funktsiooniGraafik').getContext('2d');
-
     const myChart = new Chart(ctx, {
         type: 'scatter',
         data: {
             datasets: [
                 {
-                    label: 'f(x) = ' + valem,
-                    data: datasetF,
+                    label: 'f(x)',
+                    data: generateDatasetPoints(fnF, curMinX, curMaxX),
                     showLine: true,
+                    spanGaps: false,
                     borderColor: '#0d6efd',
-                    borderWidth: 2.5,
-                    backgroundColor: '#0d6efd',
-                    pointRadius: 0
+                    borderWidth: 3.2,
+                    pointRadius: 0,
+                    hidden: !visibility[0]
                 },
                 {
-                    label: "f'(x) = " + tuletis,
-                    data: datasetD,
+                    label: "f'(x)",
+                    data: generateDerivativePoints(fnF, curMinX, curMaxX),
                     showLine: true,
+                    spanGaps: false,
                     borderColor: '#dc3545',
                     borderWidth: 2,
                     borderDash: [6, 6],
-                    backgroundColor: '#dc3545',
-                    pointRadius: 0
+                    pointRadius: 0,
+                    hidden: !visibility[1]
+                },
+                {
+                    label: "Põhipunktid",
+                    data: markepunktid.map(p => ({ x: p.x, y: p.y, label: p.label })),
+                    showLine: false,
+                    pointRadius: 7,
+                    backgroundColor: '#198754',
+                    borderColor: '#ffffff',
+                    borderWidth: 2,
+                    hidden: !visibility[2]
                 }
             ]
         },
         options: {
             responsive: true,
-            maintainAspectRatio: true,
+            maintainAspectRatio: false,
             animation: false,
             scales: {
                 x: {
                     type: 'linear',
-                    position: 'center',
-                    min: -5,
-                    max: 5,
-                    title: { display: true, text: 'X', font: { weight: 'bold', size: 14 } },
-                    grid: teljeGrid
+                    min: curMinX,
+                    max: curMaxX,
+                    title: { display: true, text: 'X telg', font: { weight: 'bold', size: 14 } },
+                    grid: {
+                        color: (c) => c.tick.value === 0 ? '#111827' : '#e5e7eb',
+                        lineWidth: (c) => c.tick.value === 0 ? 2 : 1
+                    }
                 },
                 y: {
                     type: 'linear',
-                    position: 'center',
-                    min: -10,
-                    max: 10,
-                    title: { display: true, text: 'Y', font: { weight: 'bold', size: 14 } },
-                    grid: teljeGrid
+                    min: -15,
+                    max: 15,
+                    title: { display: true, text: 'Y telg', font: { weight: 'bold', size: 14 } },
+                    grid: {
+                        color: (c) => c.tick.value === 0 ? '#111827' : '#e5e7eb',
+                        lineWidth: (c) => c.tick.value === 0 ? 2 : 1
+                    }
                 }
             },
             plugins: {
-                legend: { position: 'top' },
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) {
+                            if (ctx.datasetIndex === 2) return ctx.raw.label || `(${ctx.parsed.x}; ${ctx.parsed.y})`;
+                            return `${ctx.dataset.label}: (${ctx.parsed.x.toFixed(2)}; ${ctx.parsed.y.toFixed(2)})`;
+                        }
+                    }
+                },
                 zoom: {
-                    pan: { enabled: true, mode: 'xy' },
-                    zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'xy' }
+                    pan: { enabled: true, mode: 'xy', onPanComplete: refreshChartData },
+                    zoom: { wheel: { enabled: true, speed: 0.08 }, pinch: { enabled: true }, mode: 'xy', onZoomComplete: refreshChartData }
                 }
             }
         }
     });
 
-    function resetZoom() {
+    function refreshChartData() {
+        const xMin = myChart.scales.x.min;
+        const xMax = myChart.scales.x.max;
+
+        if (visibility[0] && fnF) myChart.data.datasets[0].data = generateDatasetPoints(fnF, xMin, xMax);
+        if (visibility[1] && fnF) myChart.data.datasets[1].data = generateDerivativePoints(fnF, xMin, xMax);
+
+        myChart.update('none');
+    }
+
+    function toggleLayer(index) {
+        visibility[index] = !visibility[index];
+        myChart.setDatasetVisibility(index, visibility[index]);
+        if (visibility[index]) refreshChartData();
+        else myChart.update('none');
+
+        const btn = document.getElementById('btnLayer' + index);
+        const activeClasses = ['btn-primary', 'btn-danger', 'btn-success'];
+        const outlineClasses = ['btn-outline-primary', 'btn-outline-danger', 'btn-outline-success'];
+        btn.className = `btn btn-sm ${visibility[index] ? activeClasses[index] : outlineClasses[index]} fw-bold`;
+    }
+
+    function zoomChart(factor) {
+        myChart.zoom(factor);
+        refreshChartData();
+    }
+
+    function resetChartView() {
         myChart.resetZoom();
+        refreshChartData();
     }
 </script>
